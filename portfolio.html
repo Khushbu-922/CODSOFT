@@ -1,0 +1,406 @@
+<import { useState } from 'react';
+import axios from 'axios';
+
+function Login() {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+
+    const handleLogin = async (e) ={
+        e.preventDefault();
+        const response = await axios.post('http://localhost:5000/api/users/login', { email, password });
+        localStorage.setItem('token', response.data.token);
+        window.location.href = '/';
+    };
+
+    return (
+        <form onSubmit={handleLogin}>
+            <input type="email" placeholder="Email" onChange={e =setEmail(e.target.value)} required /
+            <input type="password" placeholder="Password" onChange={e =setPassword(e.target.value)} required /
+            <button type="submit">Login</button>
+        </form>
+    );
+}
+
+<export default Login;
+const express = require('express');
+const dotenv = require('dotenv');
+const cors = require('cors');
+const mongoose = require('mongoose');
+
+dotenv.config();
+const app = express();
+app.use(express.json());
+app.use(cors());
+
+mongoose.connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+}).then(() =console.log("MongoDB Connected"))
+  .catch(err = onsole.error(err));
+
+// Import Routes
+const userRoutes = require('./routes/userRoutes');
+const jobRoutes = require('./routes/jobRoutes');
+
+app.use('/api/users', userRoutes);
+app.use('/api/jobs', jobRoutes);
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () =console.log(Server running on port ${PORT}));
+const express = require('express');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+
+const router = express.Router();
+
+// Register User
+router.post('/register', async (req, res) ={
+    const { name, email, password, role } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    try {
+        const newUser = new User({ name, email, password: hashedPassword, role });
+        await newUser.save();
+        res.status(201).json({ message: "User registered successfully" });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+// Login User
+router.post('/login', async (req, res) ={
+    const { email, password } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+        return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "1d" });
+    res.json({ token, role: user.role });
+});
+
+module.exports = router;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Creative Portfolio</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        header {
+            position: sticky;
+            top: 0;
+            background: linear-gradient(90deg, #6a11cb, #2575fc);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            z-index: 1000;
+        }
+
+        header .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            margin: 0;
+            padding: 0;
+        }
+
+        nav ul li {
+            margin: 0 15px;
+        }
+
+        nav ul li a {
+            text-decoration: none;
+            color: white;
+            font-size: 1rem;
+            transition: color 0.3s;
+        }
+
+        nav ul li a:hover {
+            color: #ffd700;
+        }
+
+        section {
+            padding: 50px 20px;
+        }
+
+        #about {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+        }
+
+        #about img {
+            width: 350px;
+            height: 350px;
+            border-radius: 100;
+            transition: transform 0.3s, filter 0.3s;
+            filter: grayscale(10%);
+        }
+
+        #about img:hover {
+            transform: scale(1.1);
+            filter: grayscale(0);
+        }
+
+        #about div {
+            max-width: 600px;
+        }
+
+        #about h2 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        #about p span {
+            color: #6a11cb;
+            font-weight: bold;
+        }
+
+        #skills {
+            background: #f9f9f9;
+        }
+
+        #skills .skills-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 20px;
+            text-align: center;
+        }
+       
+
+        #skills .skill {
+            background: #2575fc;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        #projects {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .project-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.3s;
+        }
+
+        .project-card:hover {
+            transform: scale(1.05);
+        }
+
+        .project-card img {
+            width: 135px;
+            height: 135px;
+            object-fit: cover;
+        }
+
+        .project-card h3 {
+            margin: 10px;
+            font-size: 1.2rem;
+        }
+
+        .project-card p {
+            margin: 10px;
+        }
+
+        .project-card .btn {
+            display: block;
+            margin: 10px;
+            padding: 10px;
+            background: #6a11cb;
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+
+        .project-card .btn:hover {
+            background: #2575fc;
+        }
+
+        #resume {
+            text-align: center;
+        }
+
+        #resume .btn {
+            display: inline-block;
+            padding: 15px 30px;
+            background: #6a11cb;
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            transition: background 0.3s;
+        }
+
+        #resume .btn:hover {
+            background: #2575fc;
+        }
+
+        #contact {
+            text-align: center;
+        }
+
+        #contact form {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        #contact form input, #contact form textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        #contact form button {
+            padding: 10px 20px;
+            background: #6a11cb;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        #contact form button:hover {
+            background: #2575fc;
+        }
+
+        footer {
+            background: #333;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+
+        footer a {
+            color: #ffd700;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">Khushbu Sharnagat</div>
+        <nav>
+            <ul>
+                <li><a href="#about">About</a></li>
+                <li><a href="#skills">Skills</a></li>
+                <li><a href="#projects">Projects</a></li>
+                <li><a href="#resume">Resume</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <section id="about">
+        <img src="my-photo.jpg" alt="Khushbu Sharnagat">
+        <div>
+            <h2>About Me</h2>
+            <p>
+                Hi! I’m a Khushbu Sharnagat, a second-year
+                 Electronics and Telecommunication student 
+                 pursuing a Bachelor of Technology degree.  
+                 </span> and <span>UI/UX designer</span> 
+                 with a passion for creating . I specialize
+                  in <strong>HTML, CSS, and JavaScript</strong>.
+                  Dedicated to continuous learning and staying 
+                  updated with the latest design technologies.A problem 
+                  solver with a keen eye for detail, ensuring seamless 
+                  interactions and smooth user journeys.
+                  Always eager to learn, adapt, and innovate 
+                  in the fast-paced world of design and technology.
+                </p>
+        </div>
+    </section>
+    <section id="skills">
+        <h2>Skills</h2>
+        <div class="skills-grid">
+            <div class="skill">HTML</div>
+            <div class="skill">JavaScript</div>
+            <div class="skill">C++</div>
+            <div class="skill">Teamwork</div>
+            <div class="skill">Creative</div>
+        </div>
+    </section>
+
+    <section id="projects">
+        <h2>Projects</h2>
+        <div class="project-card">
+            <img src="project1.png" alt="Project 1">
+            <h3>Project title:Calculator</h3>
+            <p>The Simple Calculator is a web-based
+             application builtwith HTML, CSS, and 
+             JavaScript that allows users to perform 
+             basic arithmetic operations like addition,
+             subtraction, multiplication, and division.
+             Feauters are Real-time calculations with 
+             instant results and Styled with CSS for
+              a smooth user experience</p>
+            <a href="#" class="btn">View Project</a>
+        </div>
+        <div class="project-card">
+            <img src="project2.png" alt="Project 2">
+            <h3>Project Title:Cricket ticket Booking</h3>
+            <p>The Cricket Ticket Booking System is a 
+                web-based platform developed using HTML,
+                CSS, and JavaScript that allows users 
+                to book tickets for upcoming cricket
+                matches easily.features are Seat Selection:Users
+                can choose seats from a visually interactive layout
+                Real-Time Price Calculation – Automatically </p>
+            <a href="#" class="btn">View Project</a>
+        </div>
+    </section>
+
+    <section id="resume">
+        <h2>Resume</h2>
+        <p>Click below to download my resume.</p>
+        <a href="RESUME...pdf" download class="btn">Download Resume</a>
+    </section>
+
+    <section id="contact">
+        <h2>Contact Me</h2>
+        <form>
+            <input type="text" placeholder="Your Name">
+            <input type="email" placeholder="Your Email">
+            <textarea placeholder="Your Message"></textarea>
+            <button type="submit">Send Message</button>
+        </form>
+        <p>Email:khushbusharnagat37@gmail.com | Phone: 9322338289</p>
+    </section>
+
+    <footer>
+        <p>&copy; 2025 Your Name. All rights reserved. <a href="#top">Back to Top</a></p>
+    </footer>
+</body>
+</html>
